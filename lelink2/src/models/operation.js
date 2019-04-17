@@ -1,0 +1,143 @@
+import { routerRedux } from 'dva/router';
+import { fetchOperateByCondition,submitOperation, removeOperation } from '../services/operation';
+import { notification } from 'antd';
+import { unauth_code } from '../utils/common';
+
+export default {
+  namespace: 'operation',
+
+  state: {
+    data: {
+      list: [],
+      pagination: {},
+    },
+  },
+
+  effects: {
+
+    // *fetch({ payload }, { call, put }) {
+    //   const response = yield call(fetchOperation, payload);
+    //    //console.log(1111111);
+    //   console.log(response);
+    // }
+    // *fetch({ payload }, { call, put }) {
+    //   const response = yield call(fetchOperation, payload);
+    //   // console.log(1111111);
+    //   console.log(response);
+    // }
+    *fetchOperateByCondition({ payload }, { call, put }) {
+      const response = yield call(fetchOperateByCondition, payload);
+      if(response.code != unauth_code){
+        if(response.ResponseState.toLowerCase() != 'success'){
+          notification['error']({
+            message: '操作提示',
+            description: response.ResponseMessage,
+            duration: 3
+          });
+        }else{
+          const result = {
+            list: response.ResponseData.operateInfo,
+            pagination: {
+              total: response.ResponseData.operateInfo.total,
+            },
+          };
+          // console.log(result);
+          yield put({
+            type: 'save',
+            payload: result,
+          });
+        }
+        
+      }else{
+        localStorage.clear();
+        yield put(routerRedux.push(`/user/login`));
+      }
+      
+    },
+    *submit({ payload, callback }, { call, put }) {
+      const response = yield call(submitOperation, payload);
+      console.log(55555);
+      console.log(response);
+      if(response.code != unauth_code){
+        if(response.ResponseState.toLowerCase() != 'success'){
+          notification['error']({
+            message: '操作提示',
+            description: response.ResponseMessage,
+            duration: 3
+          });
+        }else{
+  
+          notification['success']({
+            message: '操作提示',
+            description: response.ResponseMessage,
+            duration: 2
+          });
+  
+         
+  
+          yield put({
+            type: 'save',
+            payload:response.ResponseData,
+          });
+  
+        }
+
+        if (callback) callback(response.ResponseState.toLowerCase());
+
+      }else{
+        localStorage.clear();
+        yield put(routerRedux.push(`/user/login`));
+      }
+
+    },
+    *remove({ payload, callback }, { call, put }) {
+      const response = yield call(removeOperation, payload);
+      if(response.code != unauth_code){
+        if(response.ResponseState.toLowerCase() != 'success'){
+          notification['error']({
+            message: '操作提示',
+            description: response.ResponseMessage,
+            duration: 3
+          });
+        }else{
+  
+          notification['success']({
+            message: '操作提示',
+            description: response.ResponseMessage,
+            duration: 2
+          });
+  
+          const result = {
+            list: response.Data.operationInfo.data[0],
+            pagination: {
+              total: response.Data.operationInfo.total,
+            },
+          };
+  
+          yield put({
+            type: 'save',
+            payload: result,
+          });
+  
+          if (callback) callback();
+  
+        }
+      }else{
+        localStorage.clear();
+        yield put(routerRedux.push(`/user/login`));
+      }
+      
+    },
+
+},
+
+
+reducers: {
+  save(state, action) {
+    return {
+      ...state,
+      data: action.payload,
+    };
+  },
+},
+};
